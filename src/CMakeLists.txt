@@ -1,6 +1,12 @@
 include(CheckCXXSourceCompiles)
 
 check_cxx_source_compiles("
+#if defined(__has_feature)
+#  if __has_feature(undefined_behavior_sanitizer)
+#    error UBSAN and bitint don't work together yet, see https://github.com/llvm/llvm-project/issues/64100
+#  endif
+#endif
+
 int main() {
   using T=_ExtInt(512);
   return 0;
@@ -13,7 +19,6 @@ add_library (
         bn256.cpp
         random_255.cpp)
 target_include_directories (bn256 PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>"
-                                         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../third-party/span/include>"
                                          "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
 
@@ -24,7 +29,6 @@ endif()
 
 if (BN256_ENABLE_BMI2)
         target_compile_options(bn256 PUBLIC -mbmi2)
-        target_compile_definitions(bn256 PRIVATE BN256_HAS_BMI2)
 endif()
 
 if(BN256_INSTALL_COMPONENT)
