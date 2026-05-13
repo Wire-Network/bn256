@@ -33,7 +33,8 @@ install(TARGETS bn256
 
 install(EXPORT bn256
         DESTINATION "lib/cmake/bn256"
-        FILE bn256-targets.cmake)
+        FILE bn256-targets.cmake
+        NAMESPACE bn256::)
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake.in
