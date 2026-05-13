@@ -1,10 +1,10 @@
 #pragma once
 #include "array.h"
 #include "bitint_arithmetic.h"
-#include <type_traits>
-#include <tuple>
 #include <iomanip>
 #include <iostream>
+#include <tuple>
+#include <type_traits>
 namespace bn256 {
 
 constexpr uint64_t signbits(int64_t a) { return a < 0 ? UINT64_MAX : 0; }
@@ -106,11 +106,11 @@ struct int512_t {
    friend constexpr int512_t operator<<(const int512_t& a, int n) {
       int512_t r{};
       auto     limb_offset      = n / 64;
-      auto     limb_shfit_count = n % 64;
+      auto     limb_shift_count = n % 64;
 
       for (int i = 0, j = limb_offset + 1; j < 8; ++i, ++j)
-         r.limbs_[j] = shl128(a.limbs_[i], a.limbs_[i + 1], limb_shfit_count);
-      r.limbs_[limb_offset] = (a.limbs_[0] << limb_shfit_count);
+         r.limbs_[j] = shl128(a.limbs_[i], a.limbs_[i + 1], limb_shift_count);
+      r.limbs_[limb_offset] = (a.limbs_[0] << limb_shift_count);
       return r;
    }
 
@@ -122,12 +122,12 @@ struct int512_t {
    friend constexpr int512_t operator>>(const int512_t& a, int n) {
       int512_t r{};
       auto     limb_offset      = n / 64;
-      auto     limb_shfit_count = n % 64;
+      auto     limb_shift_count = n % 64;
 
       for (int i = limb_offset + 1, j = 0; i < 8; ++i, ++j)
-         r.limbs_[j] = shr128(a.limbs_[i - 1], a.limbs_[i], limb_shfit_count);
+         r.limbs_[j] = shr128(a.limbs_[i - 1], a.limbs_[i], limb_shift_count);
 
-      r.limbs_[7] = (a.limbs_[7 - limb_offset] >> limb_shfit_count);
+      r.limbs_[7 - limb_offset] = (a.limbs_[7] >> limb_shift_count);
       return r;
    }
 
@@ -144,7 +144,7 @@ struct int512_t {
    friend constexpr int512_t operator|(const int512_t& a, const int512_t& b) {
       int512_t c{};
       for (int i = 0; i < 8; ++i) { c.limbs_[i] = a.limbs_[i] | b.limbs_[i]; }
-      return a;
+      return c;
    }
 
    friend constexpr int512_t& operator&=(int512_t& a, const int512_t& b) {
@@ -155,7 +155,7 @@ struct int512_t {
    friend constexpr int512_t operator&(const int512_t& a, const int512_t& b) {
       int512_t c{};
       for (int i = 0; i < 8; ++i) { c.limbs_[i] = a.limbs_[i] & b.limbs_[i]; }
-      return a;
+      return c;
    }
 
    constexpr operator bool() { return *this != int512_t{}; }
@@ -215,7 +215,6 @@ struct int512_t {
 
    friend constexpr int512_t operator%(const int512_t& a, const int512_t& b) {
       return std::get<1>(divmod(a, b));
-      ;
    }
 
    friend constexpr int512_t& operator%=(int512_t& a, const int512_t& b) {
@@ -233,7 +232,7 @@ struct int512_t {
 template <char... Chars>
 constexpr int512_t operator""_i512() {
 
-   auto parse_heximal = [](const char* str) {
+   auto parse_hexadecimal = [](const char* str) {
       int512_t r{};
       int      i = 0;
 
@@ -261,19 +260,19 @@ constexpr int512_t operator""_i512() {
    int512_t   r{};
    int        i = 0;
    if (str[0] == '0' && str[1] == 'x')
-      return parse_heximal(str + 2);
+      return parse_hexadecimal(str + 2);
 
-   bool is_negtive = (str[0] == '-');
-   if (is_negtive)
+   bool is_negative = (str[0] == '-');
+   if (is_negative)
       ++i;
 
    while (char digit = str[i++]) {
-      if (digit < '0' && digit > '9')
+      if (digit < '0' || digit > '9')
          throw "invalid digits";
       r *= 10;
       r += (digit - '0');
    }
-   return is_negtive ? int512_t{} - r : r;
+   return is_negative ? int512_t{} - r : r;
 }
 
 inline std::ostream& operator<<(std::ostream& os, const int512_t& a) {
@@ -316,10 +315,21 @@ namespace testing {
    static_assert(leading_zeros(int512_t{ 0, 0, 0, 0, 0, 0, 0, 0x0FFFFFFFFFFFFFFF }) == 4);
    static_assert(leading_zeros(int512_t{ 0, 0, 0, 0, 0, 0, 0x0FFFFFFFFFFFFFFF, 0 }) == 68);
    static_assert(leading_zeros(int512_t{ 0x0FFFFFFFFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 }) == 452);
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } >> 0) == int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 });
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } >> 64) == int512_t{ 2, 3, 4, 5, 6, 7, 8, 0 });
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } >> 65) ==
+                 int512_t{ 0x8000000000000001, 0x0000000000000001, 0x8000000000000002, 0x0000000000000002,
+                           0x8000000000000003, 0x0000000000000003, 0x0000000000000004, 0 });
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } >> 128) == int512_t{ 3, 4, 5, 6, 7, 8, 0, 0 });
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } | int512_t{ 2, 1, 4, 3, 6, 5, 8, 7 }) ==
+                 int512_t{ 3, 3, 7, 7, 7, 7, 15, 15 });
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } & int512_t{ 3, 3, 5, 5, 7, 7, 9, 9 }) ==
+                 int512_t{ 1, 2, 1, 4, 5, 6, 1, 8 });
 
-   static_assert( 21888242871839275222246405745257275088548364400416034343698204186575808495617_i512 == abs(21888242871839275222246405745257275088548364400416034343698204186575808495617_i512));
-   static_assert( 21888242871839275222246405745257275088548364400416034343698204186575808495617_i512 == abs(-21888242871839275222246405745257275088548364400416034343698204186575808495617_i512));
-
+   static_assert(21888242871839275222246405745257275088548364400416034343698204186575808495617_i512 ==
+                 abs(21888242871839275222246405745257275088548364400416034343698204186575808495617_i512));
+   static_assert(21888242871839275222246405745257275088548364400416034343698204186575808495617_i512 ==
+                 abs(-21888242871839275222246405745257275088548364400416034343698204186575808495617_i512));
 
    static_assert(
          21888242871839275222246405745257275088548364400416034343698204186575808495617_i512 *
