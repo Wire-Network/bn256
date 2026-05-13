@@ -25,11 +25,13 @@ set_property(TARGET bn256 PROPERTY SOVERSION ${bn256_VERSION_MAJOR})
 set_property(TARGET bn256 PROPERTY INTERFACE_bn256_MAJOR_VERSION ${bn256_VERSION_MAJOR})
 set_property(TARGET bn256 APPEND PROPERTY COMPATIBLE_INTERFACE_STRING bn256_MAJOR_VERSION)
 
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-
 if(BN256_INSTALL_COMPONENT)
    set(INSTALL_COMPONENT_ARGS COMPONENT ${BN256_INSTALL_COMPONENT} EXCLUDE_FROM_ALL)
 endif()
+
+install(DIRECTORY include/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        ${INSTALL_COMPONENT_ARGS})
 
 install(TARGETS bn256
         EXPORT bn256
@@ -39,7 +41,8 @@ install(TARGETS bn256
 install(EXPORT bn256
         DESTINATION "lib/cmake/bn256"
         FILE bn256-targets.cmake
-        NAMESPACE bn256::)
+        NAMESPACE bn256::
+        ${INSTALL_COMPONENT_ARGS})
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake.in
@@ -51,6 +54,7 @@ install(FILES
           "${CMAKE_CURRENT_BINARY_DIR}/bn256-config.cmake"
           "${CMAKE_CURRENT_BINARY_DIR}/bn256-config-version.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/bn256
+        ${INSTALL_COMPONENT_ARGS}
 )
 
 write_basic_package_version_file(
