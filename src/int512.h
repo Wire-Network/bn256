@@ -127,7 +127,7 @@ struct int512_t {
       for (int i = limb_offset + 1, j = 0; i < 8; ++i, ++j)
          r.limbs_[j] = shr128(a.limbs_[i - 1], a.limbs_[i], limb_shfit_count);
 
-      r.limbs_[7] = (a.limbs_[7 - limb_offset] >> limb_shfit_count);
+      r.limbs_[7 - limb_offset] = (a.limbs_[7] >> limb_shfit_count);
       return r;
    }
 
@@ -144,7 +144,7 @@ struct int512_t {
    friend constexpr int512_t operator|(const int512_t& a, const int512_t& b) {
       int512_t c{};
       for (int i = 0; i < 8; ++i) { c.limbs_[i] = a.limbs_[i] | b.limbs_[i]; }
-      return a;
+      return c;
    }
 
    friend constexpr int512_t& operator&=(int512_t& a, const int512_t& b) {
@@ -155,7 +155,7 @@ struct int512_t {
    friend constexpr int512_t operator&(const int512_t& a, const int512_t& b) {
       int512_t c{};
       for (int i = 0; i < 8; ++i) { c.limbs_[i] = a.limbs_[i] & b.limbs_[i]; }
-      return a;
+      return c;
    }
 
    constexpr operator bool() { return *this != int512_t{}; }
@@ -316,6 +316,11 @@ namespace testing {
    static_assert(leading_zeros(int512_t{ 0, 0, 0, 0, 0, 0, 0, 0x0FFFFFFFFFFFFFFF }) == 4);
    static_assert(leading_zeros(int512_t{ 0, 0, 0, 0, 0, 0, 0x0FFFFFFFFFFFFFFF, 0 }) == 68);
    static_assert(leading_zeros(int512_t{ 0x0FFFFFFFFFFFFFFF, 0, 0, 0, 0, 0, 0, 0 }) == 452);
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } >> 64) == int512_t{ 2, 3, 4, 5, 6, 7, 8, 0 });
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } | int512_t{ 2, 1, 4, 3, 6, 5, 8, 7 }) ==
+                 int512_t{ 3, 3, 7, 7, 7, 7, 15, 15 });
+   static_assert((int512_t{ 1, 2, 3, 4, 5, 6, 7, 8 } & int512_t{ 3, 3, 5, 5, 7, 7, 9, 9 }) ==
+                 int512_t{ 1, 2, 1, 4, 5, 6, 1, 8 });
 
    static_assert(21888242871839275222246405745257275088548364400416034343698204186575808495617_i512 ==
                  abs(21888242871839275222246405745257275088548364400416034343698204186575808495617_i512));
